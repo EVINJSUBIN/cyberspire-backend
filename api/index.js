@@ -41,9 +41,16 @@ app.post('/create-table', (req, res) => {
 // **INSERT data into a table**
 app.post('/insert', (req, res) => {
   const { tableName, values } = req.body;
-  const query = `INSERT INTO ${tableName} VALUES (${values})`;
 
-  db.run(query, function (err) {
+  // Ensure that values is an array of values, not a string
+  if (!Array.isArray(values) || values.length === 0) {
+    return res.status(400).send({ message: 'Values must be an array.' });
+  }
+
+  const placeholders = values.map(() => '?').join(',');
+  const query = `INSERT INTO ${tableName} VALUES (${placeholders})`;
+
+  db.run(query, values, function (err) {
     if (err) {
       console.error('Error inserting data:', err.message);
       res.status(500).send({ message: 'Error inserting data', error: err.message });
@@ -53,6 +60,7 @@ app.post('/insert', (req, res) => {
     }
   });
 });
+
 
 // **READ data from a table**
 app.get('/read/:tableName', (req, res) => {
