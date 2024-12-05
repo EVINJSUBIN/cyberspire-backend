@@ -3,7 +3,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const app = express();
-app.use(bodyParser.json()); // To parse incoming JSON data
+
+// Use bodyParser middleware to parse incoming JSON data
+app.use(bodyParser.json()); 
 
 // Initialize SQLite database in-memory
 const db = new sqlite3.Database(':memory:', (err) => {
@@ -25,6 +27,9 @@ const db = new sqlite3.Database(':memory:', (err) => {
 // **CREATE a table**
 app.post('/create-table', (req, res) => {
   const { tableName, columns } = req.body;
+  if (!tableName || !columns) {
+    return res.status(400).send({ message: 'Table name and columns are required.' });
+  }
   const query = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns})`;
 
   db.run(query, (err) => {
@@ -42,9 +47,8 @@ app.post('/create-table', (req, res) => {
 app.post('/insert', (req, res) => {
   const { tableName, values } = req.body;
 
-  // Ensure that values is an array of values, not a string
-  if (!Array.isArray(values) || values.length === 0) {
-    return res.status(400).send({ message: 'Values must be an array.' });
+  if (!tableName || !Array.isArray(values) || values.length === 0) {
+    return res.status(400).send({ message: 'Valid table name and non-empty array of values are required.' });
   }
 
   const placeholders = values.map(() => '?').join(',');
@@ -61,10 +65,13 @@ app.post('/insert', (req, res) => {
   });
 });
 
-
 // **READ data from a table**
 app.get('/read/:tableName', (req, res) => {
   const tableName = req.params.tableName;
+  if (!tableName) {
+    return res.status(400).send({ message: 'Table name is required.' });
+  }
+
   const query = `SELECT * FROM ${tableName}`;
 
   db.all(query, [], (err, rows) => {
@@ -80,6 +87,10 @@ app.get('/read/:tableName', (req, res) => {
 // **UPDATE data in a table**
 app.put('/update', (req, res) => {
   const { tableName, updates, condition } = req.body;
+  if (!tableName || !updates || !condition) {
+    return res.status(400).send({ message: 'Table name, updates, and condition are required.' });
+  }
+
   const query = `UPDATE ${tableName} SET ${updates} WHERE ${condition}`;
 
   db.run(query, function (err) {
@@ -98,6 +109,10 @@ app.put('/update', (req, res) => {
 // **DELETE data from a table**
 app.delete('/delete', (req, res) => {
   const { tableName, condition } = req.body;
+  if (!tableName || !condition) {
+    return res.status(400).send({ message: 'Table name and condition are required.' });
+  }
+
   const query = `DELETE FROM ${tableName} WHERE ${condition}`;
 
   db.run(query, function (err) {
@@ -116,6 +131,10 @@ app.delete('/delete', (req, res) => {
 // **DELETE a table**
 app.delete('/drop-table', (req, res) => {
   const { tableName } = req.body;
+  if (!tableName) {
+    return res.status(400).send({ message: 'Table name is required.' });
+  }
+
   const query = `DROP TABLE IF EXISTS ${tableName}`;
 
   db.run(query, (err) => {
