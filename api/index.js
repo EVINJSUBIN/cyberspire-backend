@@ -3,14 +3,22 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const app = express();
-app.use(bodyParser.json());  // To parse incoming JSON data
+app.use(bodyParser.json()); // To parse incoming JSON data
 
-// Create a new SQLite database (in-memory or file-based, for testing)
-const db = new sqlite3.Database('./mydatabase.db', (err) => {
+// Initialize SQLite database in-memory
+const db = new sqlite3.Database(':memory:', (err) => {
   if (err) {
-    console.error('Error opening database:', err.message);
+    console.error('Error opening in-memory database:', err.message);
   } else {
-    console.log('Connected to SQLite database.');
+    console.log('Connected to in-memory SQLite database.');
+    // Create a sample table for testing
+    db.run("CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT)", (err) => {
+      if (err) {
+        console.error('Error creating table:', err.message);
+      } else {
+        console.log('Test table created');
+      }
+    });
   }
 });
 
@@ -21,8 +29,10 @@ app.post('/create-table', (req, res) => {
 
   db.run(query, (err) => {
     if (err) {
+      console.error('Error creating table:', err.message);
       res.status(500).send({ message: 'Error creating table', error: err.message });
     } else {
+      console.log(`Table '${tableName}' created successfully.`);
       res.send({ message: `Table '${tableName}' created successfully.` });
     }
   });
@@ -31,12 +41,14 @@ app.post('/create-table', (req, res) => {
 // **INSERT data into a table**
 app.post('/insert', (req, res) => {
   const { tableName, values } = req.body;
-  const query = `INSERT INTO ${tableName} VALUES ${values}`;
+  const query = `INSERT INTO ${tableName} VALUES (${values})`;
 
   db.run(query, function (err) {
     if (err) {
+      console.error('Error inserting data:', err.message);
       res.status(500).send({ message: 'Error inserting data', error: err.message });
     } else {
+      console.log('Data inserted successfully');
       res.send({ message: 'Data inserted successfully', id: this.lastID });
     }
   });
@@ -49,6 +61,7 @@ app.get('/read/:tableName', (req, res) => {
 
   db.all(query, [], (err, rows) => {
     if (err) {
+      console.error('Error reading data:', err.message);
       res.status(500).send({ message: 'Error reading data', error: err.message });
     } else {
       res.json(rows);
@@ -63,10 +76,12 @@ app.put('/update', (req, res) => {
 
   db.run(query, function (err) {
     if (err) {
+      console.error('Error updating data:', err.message);
       res.status(500).send({ message: 'Error updating data', error: err.message });
     } else if (this.changes === 0) {
       res.status(404).send({ message: 'No rows updated. Check your condition.' });
     } else {
+      console.log('Data updated successfully');
       res.send({ message: 'Data updated successfully' });
     }
   });
@@ -79,10 +94,12 @@ app.delete('/delete', (req, res) => {
 
   db.run(query, function (err) {
     if (err) {
+      console.error('Error deleting data:', err.message);
       res.status(500).send({ message: 'Error deleting data', error: err.message });
     } else if (this.changes === 0) {
       res.status(404).send({ message: 'No rows deleted. Check your condition.' });
     } else {
+      console.log('Data deleted successfully');
       res.send({ message: 'Data deleted successfully' });
     }
   });
@@ -95,9 +112,11 @@ app.delete('/drop-table', (req, res) => {
 
   db.run(query, (err) => {
     if (err) {
+      console.error('Error dropping table:', err.message);
       res.status(500).send({ message: 'Error dropping table', error: err.message });
     } else {
-      res.send({ message: `Table '${tableName}' deleted successfully.` });
+      console.log(`Table '${tableName}' dropped successfully.`);
+      res.send({ message: `Table '${tableName}' dropped successfully.` });
     }
   });
 });
@@ -108,6 +127,7 @@ app.get('/view-tables', (req, res) => {
 
   db.all(query, [], (err, rows) => {
     if (err) {
+      console.error('Error fetching tables:', err.message);
       res.status(500).send({ message: 'Error fetching tables', error: err.message });
     } else {
       const tableNames = rows.map(row => row.name);
