@@ -1,0 +1,16 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "api/index.js",  // Points to our server file inside the api folder
+        "use": "@vercel/node"    // Use Vercel's Node.js serverless builder
+      }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",   // Routes all incoming requests to the server.js function
+        "dest": "api/index.js"
+      }
+    ]
+  }
+  

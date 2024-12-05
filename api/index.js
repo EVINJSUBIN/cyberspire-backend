@@ -1,14 +1,11 @@
-const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const express = require('express');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = 5000;
+app.use(bodyParser.json());  // To parse incoming JSON data
 
-// Middleware
-app.use(bodyParser.json());
-
-// Connect to SQLite database
+// Create a new SQLite database (in-memory or file-based, for testing)
 const db = new sqlite3.Database('./mydatabase.db', (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
@@ -19,7 +16,7 @@ const db = new sqlite3.Database('./mydatabase.db', (err) => {
 
 // **CREATE a table**
 app.post('/create-table', (req, res) => {
-  const { tableName, columns } = req.body; // Example: { tableName: "users", columns: "id INTEGER PRIMARY KEY, name TEXT, email TEXT" }
+  const { tableName, columns } = req.body;
   const query = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns})`;
 
   db.run(query, (err) => {
@@ -33,7 +30,7 @@ app.post('/create-table', (req, res) => {
 
 // **INSERT data into a table**
 app.post('/insert', (req, res) => {
-  const { tableName, values } = req.body; // Example: { tableName: "users", values: "(1, 'Evin', 'evin@example.com')" }
+  const { tableName, values } = req.body;
   const query = `INSERT INTO ${tableName} VALUES ${values}`;
 
   db.run(query, function (err) {
@@ -61,7 +58,7 @@ app.get('/read/:tableName', (req, res) => {
 
 // **UPDATE data in a table**
 app.put('/update', (req, res) => {
-  const { tableName, updates, condition } = req.body; // Example: { tableName: "users", updates: "name = 'Thomas'", condition: "id = 1" }
+  const { tableName, updates, condition } = req.body;
   const query = `UPDATE ${tableName} SET ${updates} WHERE ${condition}`;
 
   db.run(query, function (err) {
@@ -77,7 +74,7 @@ app.put('/update', (req, res) => {
 
 // **DELETE data from a table**
 app.delete('/delete', (req, res) => {
-  const { tableName, condition } = req.body; // Example: { tableName: "users", condition: "id = 1" }
+  const { tableName, condition } = req.body;
   const query = `DELETE FROM ${tableName} WHERE ${condition}`;
 
   db.run(query, function (err) {
@@ -93,7 +90,7 @@ app.delete('/delete', (req, res) => {
 
 // **DELETE a table**
 app.delete('/drop-table', (req, res) => {
-  const { tableName } = req.body; // Example: { tableName: "users" }
+  const { tableName } = req.body;
   const query = `DROP TABLE IF EXISTS ${tableName}`;
 
   db.run(query, (err) => {
@@ -105,7 +102,19 @@ app.delete('/drop-table', (req, res) => {
   });
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// **VIEW all tables in the database**
+app.get('/view-tables', (req, res) => {
+  const query = "SELECT name FROM sqlite_master WHERE type='table';";
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      res.status(500).send({ message: 'Error fetching tables', error: err.message });
+    } else {
+      const tableNames = rows.map(row => row.name);
+      res.json({ tables: tableNames });
+    }
+  });
 });
+
+// Export app as a serverless function for Vercel
+module.exports = app;
